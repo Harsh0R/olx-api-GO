@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/harsh0r/olx-api-GO/internal/config"
+	"github.com/harsh0r/olx-api-GO/internal/handlers"
 )
 
 func main() {
@@ -14,11 +15,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /helth", func(res http.ResponseWriter, req *http.Request) {
-		res.Header().Set("Content-type", "application/json")
-		res.WriteHeader(http.StatusOK)
-		res.Write([]byte(`{"Status" : "ok"}`))
-	})
+	mux.HandleFunc("GET /health", handlers.Health)
 
 	srv := http.Server{
 		Addr:         ":" + cfg.PORT,
@@ -27,7 +24,7 @@ func main() {
 		WriteTimeout: time.Second * 30,
 		IdleTimeout:  time.Second * 60,
 	}
-	log.Fatalf("Server is running on ... %s" + srv.Addr)
+	log.Printf("Server is running on ... %s", srv.Addr)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("Server fail %v", err)
 	}
