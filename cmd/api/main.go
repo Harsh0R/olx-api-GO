@@ -6,12 +6,19 @@ import (
 	"time"
 
 	"github.com/harsh0r/olx-api-GO/internal/config"
+	"github.com/harsh0r/olx-api-GO/internal/db"
 	"github.com/harsh0r/olx-api-GO/internal/handlers"
 )
 
 func main() {
 
 	cfg := config.MustLoad()
+
+	_, err := db.DbConnect(cfg.DB_URL)
+	if err != nil {
+		log.Fatalf("main.db.connect: %v", err)
+	}
+	log.Printf("database connected🥳🥳")
 
 	mux := http.NewServeMux()
 
