@@ -33,7 +33,7 @@ func main() {
 		}
 		log.Println("up called..")
 	case "down":
-		if err := m.Down(); err != nil {
+		if err := m.Steps(-1); err != nil {
 			log.Fatal(err)
 		}
 		log.Printf("down called..")
