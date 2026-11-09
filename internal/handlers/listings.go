@@ -217,11 +217,20 @@ func (lh *ListingHandler) Create(res http.ResponseWriter, req *http.Request) {
 	var reqData CreateListingObject
 	ctx := req.Context()
 	requestId := middleware.RequestIdFromContext(ctx)
+
 	if err := json.NewDecoder(req.Body).Decode(&reqData); err != nil {
 		lh.logger.Error("fail to decode", "req_id", requestId, "err", err)
 		httpx.Error(res, http.StatusBadRequest, "invalid body", httpx.CODEMalformedJSON)
 		return
 	}
+
+	if err := reqData.Validate(); err != nil {
+		var validationErr *ValidationError
+		errors.As(err, &validationErr)
+		httpx.ValidationError(res, http.StatusUnprocessableEntity, err.Error(), httpx.CODEValidationFailed, validationErr.Field)
+		return
+	}
+
 	row := lh.db.QueryRowContext(ctx,
 		`INSERT INTO listings (title, description, price, city) VALUES ($1, $2, $3, $4) RETURNING id, title, created_at`, reqData.Title, reqData.Description, reqData.Price, reqData.City)
 

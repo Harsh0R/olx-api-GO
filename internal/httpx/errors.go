@@ -37,6 +37,7 @@ type errorEnvelop struct {
 type errorPayload struct {
 	Code    CustomCode `json:"code"`
 	Message string     `json:"message"`
+	Field   string     `json:"field,omitempty"`
 }
 
 func Error(resw http.ResponseWriter, status int, message string, code CustomCode) {
@@ -45,5 +46,14 @@ func Error(resw http.ResponseWriter, status int, message string, code CustomCode
 	_ = json.NewEncoder(resw).Encode(errorEnvelop{Error: errorPayload{
 		Code:    code,
 		Message: message,
+	}})
+}
+func ValidationError(resw http.ResponseWriter, status int, message string, code CustomCode, field string) {
+	resw.Header().Set("Content-Type", "application/json")
+	resw.WriteHeader(status)
+	_ = json.NewEncoder(resw).Encode(errorEnvelop{Error: errorPayload{
+		Code:    code,
+		Message: message,
+		Field:   field,
 	}})
 }
