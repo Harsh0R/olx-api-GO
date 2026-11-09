@@ -5,13 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
 
-type listing struct {
+type Listing struct {
 	ID          string    `json:"id"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
@@ -30,78 +29,173 @@ func NewListingHandler(db *sql.DB) *ListingHandler {
 	}
 }
 
-func (lh ListingHandler) List(res http.ResponseWriter, req *http.Request) {
-	// req scop context
+// GET /listings
+func (lh *ListingHandler) List(
+	res http.ResponseWriter,
+	req *http.Request,
+) {
 	ctx := req.Context()
+
 	rows, err := lh.db.QueryContext(ctx, `
-		SELECT id, title, description, price, city, created_at 
-		FROM listings 
+		SELECT id, title, description, price, city, created_at
+		FROM listings
 		ORDER BY created_at DESC
 		LIMIT 100
-		`)
+	`)
 
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			log.Printf("Request cancelled: %v", err)
+			slog.Warn("Listing request cancelled",
+				"method", req.Method,
+				"path", req.URL.Path,
+				"error", err,
+			)
 			return
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
+			slog.Warn("Listing query timed out",
+				"method", req.Method,
+				"path", req.URL.Path,
+				"error", err,
+			)
+
 			http.Error(res, "Request timeout", http.StatusGatewayTimeout)
 			return
 		}
 
-		log.Printf("listing.query: %v", err)
+		slog.Error("Failed to fetch listings",
+			"method", req.Method,
+			"path", req.URL.Path,
+			"error", err,
+		)
+
 		http.Error(res, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	defer rows.Close()
-	listings := []listing{}
+
+	listings := make([]Listing, 0)
+
 	for rows.Next() {
-		var l listing
-		if err := rows.Scan(&l.ID, &l.Title, &l.Description, &l.Price, &l.City, &l.CreatedAt); err != nil {
-			log.Printf("rows.scan: %v", err)
-			http.Error(res, "internal Error", http.StatusInternalServerError)
+		var l Listing
+
+		if err := rows.Scan(
+			&l.ID,
+			&l.Title,
+			&l.Description,
+			&l.Price,
+			&l.City,
+			&l.CreatedAt,
+		); err != nil {
+			slog.Error("Failed to scan listing row",
+				"error", err,
+			)
+
+			http.Error(res, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+
 		listings = append(listings, l)
 	}
+
 	if err := rows.Err(); err != nil {
-		log.Printf("rows.error: %v", err)
-		http.Error(res, "internal error", http.StatusInternalServerError)
+		slog.Error("Error while iterating listing rows",
+			"error", err,
+		)
+
+		http.Error(res, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	res.Header().Set("Content-type", "application/json")
-	res.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(res).Encode(listings)
 
+	res.Header().Set("Content-Type", "application/json")
+
+	if err := json.NewEncoder(res).Encode(listings); err != nil {
+		slog.Error("Failed to encode listings response",
+			"error", err,
+		)
+		return
+	}
 }
 
-func (lh ListingHandler) DeleteList(res http.ResponseWriter, req *http.Request) {
+// DELETE /listings/{id}
+func (lh *ListingHandler) DeleteList(
+	res http.ResponseWriter,
+	req *http.Request,
+) {
 	ctx := req.Context()
-	id := req.PathValue("id")
-	fmt.Println("id -> ", id)
 
-	result, err := lh.db.ExecContext(ctx, `DELETE FROM listings WHERE id=$1`, id)
+	id := req.PathValue("id")
+
+	if id == "" {
+		slog.Warn("Delete listing request with missing ID",
+			"method", req.Method,
+			"path", req.URL.Path,
+		)
+
+		http.Error(res, "Listing ID is required", http.StatusBadRequest)
+		return
+	}
+
+	result, err := lh.db.ExecContext(
+		ctx,
+		`DELETE FROM listings WHERE id = $1`,
+		id,
+	)
+
 	if err != nil {
-		log.Printf("listing.delete: %v", err)
+		if errors.Is(err, context.Canceled) {
+			slog.Warn("Delete listing request cancelled",
+				"listing_id", id,
+				"error", err,
+			)
+			return
+		}
+
+		if errors.Is(err, context.DeadlineExceeded) {
+			slog.Warn("Delete listing query timed out",
+				"listing_id", id,
+				"error", err,
+			)
+
+			http.Error(res, "Request timeout", http.StatusGatewayTimeout)
+			return
+		}
+
+		slog.Error("Failed to delete listing",
+			"listing_id", id,
+			"error", err,
+		)
+
 		http.Error(res, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	affected, err := result.RowsAffected()
+
 	if err != nil {
-		log.Printf("listing.rows_affected: %v", err)
+		slog.Error("Failed to get affected rows",
+			"listing_id", id,
+			"error", err,
+		)
+
 		http.Error(res, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	if affected == 0 {
+		slog.Warn("Listing not found",
+			"listing_id", id,
+		)
+
 		http.Error(res, "Listing not found", http.StatusNotFound)
 		return
 	}
 
-	res.WriteHeader(http.StatusNoContent)
+	slog.Info("Listing deleted successfully",
+		"listing_id", id,
+	)
 
+	res.WriteHeader(http.StatusNoContent)
 }

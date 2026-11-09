@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/harsh0r/olx-api-GO/internal/config"
@@ -18,7 +20,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("main.db.connect: %v", err)
 	}
-	log.Printf("database connected🥳🥳")
+
+	log.Printf("database connected😘😘")
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelInfo,
+	})
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
 
 	lh := handlers.NewListingHandler(db)
 

@@ -1,0 +1,20 @@
+[
+  {
+    "time": "2026-11-09T11:23:37.9186926+05:30",
+    "level": "ERROR",
+    "msg": "delete failed",
+    "listing id": "201b3e09-a519-4598-9159-f4a31f0accaf",
+    "err": "ERROR: relation \"listing\" does not exist (SQLSTATE 42P01)"
+  },
+  {
+    "time": "2026-11-09T11:28:42.7548263+05:30",
+    "level": "INFO",
+    "msg": "Server is running on ... :8080"
+  },
+  {
+    "time": "2026-11-09T11:28:48.5716336+05:30",
+    "level": "WARN",
+    "msg": "Listing not found",
+    "listing_id": "201b3e09-a519-4598-9159-f4a31f0accaf"
+}
+]
