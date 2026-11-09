@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -29,15 +31,28 @@ func NewListingHandler(db *sql.DB) *ListingHandler {
 }
 
 func (lh ListingHandler) List(res http.ResponseWriter, req *http.Request) {
-	rows, err := lh.db.Query(`
+	// req scop context
+	ctx := req.Context()
+	rows, err := lh.db.QueryContext(ctx, `
 		SELECT id, title, description, price, city, created_at 
 		FROM listings 
 		ORDER BY created_at DESC
 		LIMIT 100
 		`)
+
 	if err != nil {
-		log.Fatalf("Error Query: %v", err)
-		http.Error(res, "internal Error", http.StatusInternalServerError)
+		if errors.Is(err, context.Canceled) {
+			log.Printf("Request cancelled: %v", err)
+			return
+		}
+
+		if errors.Is(err, context.DeadlineExceeded) {
+			http.Error(res, "Request timeout", http.StatusGatewayTimeout)
+			return
+		}
+
+		log.Printf("listing.query: %v", err)
+		http.Error(res, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -64,13 +79,26 @@ func (lh ListingHandler) List(res http.ResponseWriter, req *http.Request) {
 }
 
 func (lh ListingHandler) DeleteList(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	id := req.PathValue("id")
 	fmt.Println("id -> ", id)
 
-	_, err := lh.db.Exec(`DELETE FROM listings WHERE id=$1`, id)
+	result, err := lh.db.ExecContext(ctx, `DELETE FROM listings WHERE id=$1`, id)
 	if err != nil {
-		log.Printf("DElete: %w", err)
-		http.Error(res, "internal eroor", http.StatusInternalServerError)
+		log.Printf("listing.delete: %v", err)
+		http.Error(res, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("listing.rows_affected: %v", err)
+		http.Error(res, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if affected == 0 {
+		http.Error(res, "Listing not found", http.StatusNotFound)
 		return
 	}
 
