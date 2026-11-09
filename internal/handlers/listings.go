@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/harsh0r/olx-api-GO/internal/middleware"
 )
 
 type Listing struct {
@@ -127,7 +129,9 @@ func (lh *ListingHandler) DeleteList(
 	req *http.Request,
 ) {
 	ctx := req.Context()
-	requestId := ctx.Value("requestCtxId").(string)
+
+	requestId := middleware.RequestIdFromContext(ctx)
+	// requestId := ctx.Value("requestCtxId").(string)
 	id := req.PathValue("id")
 
 	if id == "" {
