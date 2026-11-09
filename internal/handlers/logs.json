@@ -16,5 +16,22 @@
     "level": "WARN",
     "msg": "Listing not found",
     "listing_id": "201b3e09-a519-4598-9159-f4a31f0accaf"
-}
+  },
+  {
+    "time": "2026-11-09T15:14:01.1039011+05:30",
+    "level": "INFO",
+    "msg": "Server is running on ... :8080"
+  },
+  {
+    "time": "2026-11-09T15:16:53.0438951+05:30",
+    "level": "WARN",
+    "source": {
+      "function": "github.com/harsh0r/olx-api-GO/internal/handlers.(*ListingHandler).DeleteList",
+      "file": "D:/Projects/olx-api/internal/handlers/listings.go",
+      "line": 194
+    },
+    "msg": "Listing not found",
+    "listing_id": "c491fe0b-80f3-4ec6-9a6b-f57c9ea9b373",
+    "request_id": "b6657b58-a966-45d3-b8bf-393e74867629"
+  }
 ]

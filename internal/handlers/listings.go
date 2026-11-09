@@ -127,7 +127,7 @@ func (lh *ListingHandler) DeleteList(
 	req *http.Request,
 ) {
 	ctx := req.Context()
-
+	requestId := ctx.Value("requestCtxId").(string)
 	id := req.PathValue("id")
 
 	if id == "" {
@@ -151,6 +151,7 @@ func (lh *ListingHandler) DeleteList(
 			lh.logger.Warn("Delete listing request cancelled",
 				"listing_id", id,
 				"error", err,
+				"request_id", requestId,
 			)
 			return
 		}
@@ -159,6 +160,7 @@ func (lh *ListingHandler) DeleteList(
 			lh.logger.Warn("Delete listing query timed out",
 				"listing_id", id,
 				"error", err,
+				"request_id", requestId,
 			)
 
 			http.Error(res, "Request timeout", http.StatusGatewayTimeout)
@@ -168,6 +170,7 @@ func (lh *ListingHandler) DeleteList(
 		lh.logger.Error("Failed to delete listing",
 			"listing_id", id,
 			"error", err,
+			"request_id", requestId,
 		)
 
 		http.Error(res, "Internal server error", http.StatusInternalServerError)
@@ -180,6 +183,7 @@ func (lh *ListingHandler) DeleteList(
 		lh.logger.Error("Failed to get affected rows",
 			"listing_id", id,
 			"error", err,
+			"request_id", requestId,
 		)
 
 		http.Error(res, "Internal server error", http.StatusInternalServerError)
@@ -189,6 +193,7 @@ func (lh *ListingHandler) DeleteList(
 	if affected == 0 {
 		lh.logger.Warn("Listing not found",
 			"listing_id", id,
+			"request_id", requestId,
 		)
 
 		http.Error(res, "Listing not found", http.StatusNotFound)
