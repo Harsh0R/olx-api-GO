@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/harsh0r/olx-api-GO/internal/httpx"
 	"github.com/harsh0r/olx-api-GO/internal/middleware"
 )
 
@@ -199,8 +200,8 @@ func (lh *ListingHandler) DeleteList(
 			"listing_id", id,
 			"request_id", requestId,
 		)
-
-		http.Error(res, "Listing not found", http.StatusNotFound)
+		httpx.Error(res, http.StatusInternalServerError, "somathing went wrong", "internal_error")
+		// http.Error(res, "Listing not found", http.StatusNotFound)
 		return
 	}
 
