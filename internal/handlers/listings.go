@@ -200,7 +200,7 @@ func (lh *ListingHandler) DeleteList(
 			"listing_id", id,
 			"request_id", requestId,
 		)
-		httpx.Error(res, http.StatusInternalServerError, "somathing went wrong", "internal_error")
+		httpx.Error(res, http.StatusInternalServerError, "somathing went wrong", httpx.CODEInternalError)
 		// http.Error(res, "Listing not found", http.StatusNotFound)
 		return
 	}
