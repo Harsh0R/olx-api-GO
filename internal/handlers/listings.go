@@ -214,30 +214,29 @@ func (lh *ListingHandler) DeleteList(
 
 // POST /listings
 func (lh *ListingHandler) Create(res http.ResponseWriter, req *http.Request) {
-	var reqData Listing
+	var reqData CreateListingObject
 	ctx := req.Context()
 	requestId := middleware.RequestIdFromContext(ctx)
 	if err := json.NewDecoder(req.Body).Decode(&reqData); err != nil {
 		lh.logger.Error("fail to decode", "req_id", requestId, "err", err)
 		httpx.Error(res, http.StatusBadRequest, "invalid body", httpx.CODEMalformedJSON)
 		return
-		lh.logger.Error("fail to decode", "req_id", requestId, "err", err)
-		httpx.Error(res, http.StatusBadRequest, "invalid body", httpx.CODEMalformedJSON)
-		return
 	}
 	row := lh.db.QueryRowContext(ctx,
-		`INSERT INTO listings (title, description, price, city) VALUES ($1, $2, $3, $4) RETURNING id`, reqData.Title, reqData.Description, reqData.Price, reqData.City)
+		`INSERT INTO listings (title, description, price, city) VALUES ($1, $2, $3, $4) RETURNING id, title, created_at`, reqData.Title, reqData.Description, reqData.Price, reqData.City)
 
-	var id string
-	if err := row.Scan(&id); err != nil {
+	// var id string
+	var out CreateListingResponse
+	if err := row.Scan(&out.ID, &out.Title, &out.CreatedAt); err != nil {
 		lh.logger.Error("fail to insert", "req_id", requestId, "err", err)
 		httpx.Error(res, http.StatusInternalServerError, "something went wrong", httpx.CODEInternalError)
 		return
 	}
-	lh.logger.Info("listing created", "req_id", requestId, "listing_id", id)
+	lh.logger.Info("listing created", "req_id", requestId, "listing_id", out.ID)
 
 	res.Header().Set("Content-type", "application/json")
 	res.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(res).Encode(map[string]string{"listing_id": id})
+	// _ = json.NewEncoder(res).Encode(map[string]string{"listing_id": id})
+	_ = json.NewEncoder(res).Encode(out)
 
 }
