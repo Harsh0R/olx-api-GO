@@ -20,12 +20,14 @@ type Listing struct {
 }
 
 type ListingHandler struct {
-	db *sql.DB
+	db     *sql.DB
+	logger *slog.Logger
 }
 
-func NewListingHandler(db *sql.DB) *ListingHandler {
+func NewListingHandler(db *sql.DB, logger *slog.Logger) *ListingHandler {
 	return &ListingHandler{
-		db: db,
+		db:     db,
+		logger: logger,
 	}
 }
 
@@ -45,7 +47,7 @@ func (lh *ListingHandler) List(
 
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			slog.Warn("Listing request cancelled",
+			lh.logger.Warn("Listing request cancelled",
 				"method", req.Method,
 				"path", req.URL.Path,
 				"error", err,
@@ -54,7 +56,7 @@ func (lh *ListingHandler) List(
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
-			slog.Warn("Listing query timed out",
+			lh.logger.Warn("Listing query timed out",
 				"method", req.Method,
 				"path", req.URL.Path,
 				"error", err,
@@ -64,7 +66,7 @@ func (lh *ListingHandler) List(
 			return
 		}
 
-		slog.Error("Failed to fetch listings",
+		lh.logger.Error("Failed to fetch listings",
 			"method", req.Method,
 			"path", req.URL.Path,
 			"error", err,
@@ -89,7 +91,7 @@ func (lh *ListingHandler) List(
 			&l.City,
 			&l.CreatedAt,
 		); err != nil {
-			slog.Error("Failed to scan listing row",
+			lh.logger.Error("Failed to scan listing row",
 				"error", err,
 			)
 
@@ -101,7 +103,7 @@ func (lh *ListingHandler) List(
 	}
 
 	if err := rows.Err(); err != nil {
-		slog.Error("Error while iterating listing rows",
+		lh.logger.Error("Error while iterating listing rows",
 			"error", err,
 		)
 
@@ -112,7 +114,7 @@ func (lh *ListingHandler) List(
 	res.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(res).Encode(listings); err != nil {
-		slog.Error("Failed to encode listings response",
+		lh.logger.Error("Failed to encode listings response",
 			"error", err,
 		)
 		return
@@ -129,7 +131,7 @@ func (lh *ListingHandler) DeleteList(
 	id := req.PathValue("id")
 
 	if id == "" {
-		slog.Warn("Delete listing request with missing ID",
+		lh.logger.Warn("Delete listing request with missing ID",
 			"method", req.Method,
 			"path", req.URL.Path,
 		)
@@ -146,7 +148,7 @@ func (lh *ListingHandler) DeleteList(
 
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			slog.Warn("Delete listing request cancelled",
+			lh.logger.Warn("Delete listing request cancelled",
 				"listing_id", id,
 				"error", err,
 			)
@@ -154,7 +156,7 @@ func (lh *ListingHandler) DeleteList(
 		}
 
 		if errors.Is(err, context.DeadlineExceeded) {
-			slog.Warn("Delete listing query timed out",
+			lh.logger.Warn("Delete listing query timed out",
 				"listing_id", id,
 				"error", err,
 			)
@@ -163,7 +165,7 @@ func (lh *ListingHandler) DeleteList(
 			return
 		}
 
-		slog.Error("Failed to delete listing",
+		lh.logger.Error("Failed to delete listing",
 			"listing_id", id,
 			"error", err,
 		)
@@ -175,7 +177,7 @@ func (lh *ListingHandler) DeleteList(
 	affected, err := result.RowsAffected()
 
 	if err != nil {
-		slog.Error("Failed to get affected rows",
+		lh.logger.Error("Failed to get affected rows",
 			"listing_id", id,
 			"error", err,
 		)
@@ -185,7 +187,7 @@ func (lh *ListingHandler) DeleteList(
 	}
 
 	if affected == 0 {
-		slog.Warn("Listing not found",
+		lh.logger.Warn("Listing not found",
 			"listing_id", id,
 		)
 
@@ -193,7 +195,7 @@ func (lh *ListingHandler) DeleteList(
 		return
 	}
 
-	slog.Info("Listing deleted successfully",
+	lh.logger.Info("Listing deleted successfully",
 		"listing_id", id,
 	)
 

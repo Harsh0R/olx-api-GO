@@ -29,7 +29,7 @@ func main() {
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 
-	lh := handlers.NewListingHandler(db)
+	lh := handlers.NewListingHandler(db, logger)
 
 	mux := http.NewServeMux()
 
